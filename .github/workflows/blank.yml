@@ -1,0 +1,212 @@
+
+name: Windows Performance Environment - Moonlight
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 190
+
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: Otimizar desempenho do Windows
+        shell: pwsh
+        run: |
+          Write-Host "Otimizando Windows..." -ForegroundColor Green
+
+          powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
+
+          Set-ItemProperty `
+            -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects' `
+            -Name "VisualFXSetting" -Value 2
+
+          Set-Service -Name "DiagTrack" `
+            -StartupType Disabled -ErrorAction SilentlyContinue
+
+          Set-Service -Name "dmwappushservice" `
+            -StartupType Disabled -ErrorAction SilentlyContinue
+
+          Set-ItemProperty `
+            -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\PriorityControl' `
+            -Name "Win32PrioritySeparation" -Value 38
+
+          Write-Host "Otimizacoes aplicadas."
+
+      - name: Instalar Sunshine para Moonlight
+        shell: pwsh
+        env:
+          SUNSHINE_PASSWORD: ${{ secrets.SUNSHINE_PASSWORD }}
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          Write-Host "Instalando Sunshine..." -ForegroundColor Green
+
+          if (-not $env:SUNSHINE_PASSWORD) {
+            throw "Configure o secret SUNSHINE_PASSWORD."
+          }
+
+          $release = Invoke-RestMethod `
+            -Uri "https://api.github.com/repos/LizardByte/Sunshine/releases/latest"
+
+          $asset = $release.assets |
+            Where-Object {
+              $_.name -eq "Sunshine-Windows-AMD64-installer.msi"
+            } |
+            Select-Object -First 1
+
+          if (-not $asset) {
+            throw "Instalador Sunshine nao encontrado."
+          }
+
+          $installer = "$env:TEMP\sunshine.msi"
+
+          Invoke-WebRequest `
+            -Uri $asset.browser_download_url `
+            -OutFile $installer
+
+          $process = Start-Process msiexec.exe `
+            -ArgumentList "/i `"$installer`" /qn /norestart" `
+            -Wait -PassThru
+
+          if ($process.ExitCode -notin @(0, 3010)) {
+            throw "Falha na instalacao: $($process.ExitCode)"
+          }
+
+          $sunshine = "$env:ProgramFiles\Sunshine\sunshine.exe"
+          $config = "$env:ProgramFiles\Sunshine\config\sunshine.conf"
+
+          if (-not (Test-Path $sunshine)) {
+            throw "Sunshine.exe nao encontrado."
+          }
+
+          New-Item -ItemType Directory `
+            -Force -Path (Split-Path $config) | Out-Null
+
+          @"
+          sunshine_name = Windows-Cloud-Moonlight
+          encoder = software
+          sw_preset = ultrafast
+          origin_web_ui_allowed = wan
+          upnp = disabled
+          "@ | Set-Content $config -Encoding utf8
+
+          & $sunshine --creds moonlightadmin $env:SUNSHINE_PASSWORD
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Falha ao configurar Sunshine."
+          }
+
+          $service = Get-Service SunshineService `
+            -ErrorAction Stop
+
+          if ($service.Status -eq "Running") {
+            Restart-Service SunshineService
+          } else {
+            Start-Service SunshineService
+          }
+
+          Write-Host "Sunshine configurado!" -ForegroundColor Green
+
+      - name: Instalar Tailscale e gerar IP
+        shell: pwsh
+        env:
+          TS_AUTH_KEY: ${{ secrets.TAILSCALE_AUTH_KEY }}
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          Write-Host "Instalando Tailscale..." -ForegroundColor Green
+
+          if (-not $env:TS_AUTH_KEY) {
+            throw "Configure TAILSCALE_AUTH_KEY."
+          }
+
+          choco install tailscale -y --no-progress
+
+          $ts = "C:\Program Files\Tailscale\tailscale.exe"
+
+          & $ts up `
+            --authkey=$env:TS_AUTH_KEY `
+            --hostname=windows-moonlight `
+            --accept-routes
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Falha ao conectar Tailscale."
+          }
+
+          $ip = & $ts ip -4 | Select-Object -First 1
+
+          if (-not $ip) {
+            throw "IP Tailscale nao encontrado."
+          }
+
+          "MOONLIGHT_IP=$ip" >> $env:GITHUB_ENV
+
+          Write-Host "=================================="
+          Write-Host "IP PARA MOONLIGHT: $ip" -ForegroundColor Cyan
+          Write-Host "=================================="
+
+      - name: Mostrar IP e verificar Sunshine
+        shell: pwsh
+        run: |
+          $ip = $env:MOONLIGHT_IP
+
+          Write-Host "====================================" -ForegroundColor Green
+          Write-Host "WINDOWS CLOUD - MOONLIGHT"
+          Write-Host "===================================="
+          Write-Host "IP MOONLIGHT: $ip" -ForegroundColor Cyan
+          Write-Host "Painel: https://${ip}:47990"
+          Write-Host "Usuario Sunshine: moonlightadmin"
+          Write-Host "Senha: secret SUNSHINE_PASSWORD"
+          Write-Host "===================================="
+
+          $service = Get-Service SunshineService `
+            -ErrorAction SilentlyContinue
+
+          if ($service) {
+            Write-Host "Sunshine: $($service.Status)"
+          }
+
+          $webUI = Test-NetConnection `
+            -ComputerName 127.0.0.1 `
+            -Port 47990 `
+            -InformationLevel Quiet
+
+          Write-Host "Painel Sunshine responde: $webUI"
+
+          Write-Host "Adaptador de video:"
+          Get-CimInstance Win32_VideoController |
+            Select-Object Name, DriverVersion |
+            Format-Table -AutoSize
+
+          @(
+            "## Windows Moonlight"
+            ""
+            "**IP para Moonlight:** $ip"
+            ""
+            "**Painel Sunshine:** https://${ip}:47990"
+            ""
+            "**Usuario:** moonlightadmin"
+            ""
+            "Senha configurada pelo secret SUNSHINE_PASSWORD."
+            ""
+            "Sunshine ativo nao garante streaming de video."
+          ) | Out-File `
+            -FilePath $env:GITHUB_STEP_SUMMARY `
+            -Append -Encoding utf8
+
+      - name: Manter Windows ativo por 3 horas
+        shell: pwsh
+        run: |
+          Write-Host "Ambiente disponivel para testes."
+          Write-Host "IP Moonlight: $env:MOONLIGHT_IP"
+
+          $i = 0
+
+          while ($i -lt 180) {
+            Start-Sleep -Seconds 60
+            $i++
+          }
