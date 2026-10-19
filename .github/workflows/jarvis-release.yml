@@ -130,7 +130,9 @@ jobs:
         run: |
           $exe = "services/agent-runtime/dist/jarvis-agent-runtime/jarvis-agent-runtime.exe"
           if (-not (Test-Path $exe)) { throw "Runtime nao empacotado" }
-          $proc = Start-Process -FilePath $exe -PassThru -WindowStyle Hidden -Environment @{
+          $out = Join-Path $env:RUNNER_TEMP "runtime.out.log"
+          $err = Join-Path $env:RUNNER_TEMP "runtime.err.log"
+          $proc = Start-Process -FilePath $exe -PassThru -WindowStyle Hidden -RedirectStandardOutput $out -RedirectStandardError $err -Environment @{
             JARVIS_DATA_DIR = "${{ github.workspace }}\.ci-data"
             JARVIS_PORT = "8799"
             JARVIS_REQUIRE_AUTH = "0"
@@ -145,7 +147,13 @@ jobs:
                 if ($health.status -eq "ok") { $ok = $true; break }
               } catch { }
             }
-            if (-not $ok) { throw "Runtime congelado nao respondeu em 40s" }
+            if (-not $ok) {
+              Write-Host "--- stdout ---"; Get-Content $out -ErrorAction SilentlyContinue | Select-Object -Last 60
+              Write-Host "--- stderr ---"; Get-Content $err -ErrorAction SilentlyContinue | Select-Object -Last 60
+              Write-Host "--- runtime.log ---"
+              Get-Content "${{ github.workspace }}\.ci-data\logs\runtime.log" -ErrorAction SilentlyContinue | Select-Object -Last 60
+              throw "Runtime congelado nao respondeu em 40s"
+            }
             Write-Host "Runtime respondeu: $($health.version)"
           }
           finally {

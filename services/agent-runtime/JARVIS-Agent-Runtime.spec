@@ -29,7 +29,7 @@ hiddenimports += [
 datas = collect_data_files("certifi")
 
 a = Analysis(
-    ["jarvis/__main__.py"],
+    ["runtime_entry.py"],
     pathex=["."],
     binaries=[],
     datas=datas,
@@ -51,7 +51,9 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=False,
-    console=False,
+    # console=True keeps uvicorn's logging working and turns crashes into stderr
+    # output instead of a modal dialog. Electron spawns it with windowsHide:true.
+    console=True,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch="x86_64",
