@@ -179,16 +179,21 @@ jobs:
 
       - name: Empacotar instalador e portatil
         shell: pwsh
-        # electron-builder reads the package.json of its working directory. Running from
-        # the repo root would treat the workspace package.json as the app (main=index.js).
-        working-directory: apps/desktop
+        # `--project` makes electron-builder use apps/desktop/package.json as the app
+        # while resolving binaries from the hoisted root node_modules (npm workspaces).
         env:
           JARVIS_ARTIFACT_VERSION: ${{ steps.version.outputs.value }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $version = "${{ steps.version.outputs.value }}"
-          $output = npx electron-builder --win nsis portable --x64 --publish never "-c.extraMetadata.version=$version" 2>&1
+          $output = npx electron-builder --project apps/desktop --win nsis portable --x64 --publish never "-c.extraMetadata.version=$version" 2>&1
           $code = $LASTEXITCODE
+          if ($code -ne 0) {
+            Write-Host "Primeira tentativa falhou (codigo $code); repetindo uma vez apos 10s."
+            Start-Sleep -Seconds 10
+            $output = npx electron-builder --project apps/desktop --win nsis portable --x64 --publish never "-c.extraMetadata.version=$version" 2>&1
+            $code = $LASTEXITCODE
+          }
           $output | ForEach-Object { Write-Host $_ }
           $output | Out-File -Encoding utf8 "release-builder.log"
           if ($code -ne 0) {
