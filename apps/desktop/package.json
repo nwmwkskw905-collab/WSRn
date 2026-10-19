@@ -1,0 +1,98 @@
+{
+  "name": "jarvis-desktop",
+  "version": "0.9.0",
+  "private": true,
+  "description": "JARVIS AI - assistente autonomo para Windows",
+  "main": "dist-electron/main/index.js",
+  "author": "JARVIS AI",
+  "license": "UNLICENSED",
+  "scripts": {
+    "dev": "concurrently -k \"vite\" \"npm:dev:main\"",
+    "dev:main": "wait-on tcp:5173 && tsc -p tsconfig.main.json && cross-env JARVIS_RENDERER_URL=http://localhost:5173 electron .",
+    "build": "tsc -p tsconfig.main.json && vite build",
+    "typecheck": "tsc -p tsconfig.main.json --noEmit && tsc -p tsconfig.renderer.json --noEmit",
+    "dist": "npm run build && electron-builder --win nsis portable",
+    "dist:dir": "npm run build && electron-builder --dir",
+    "smoke:render": "node ../../scripts/render-smoke.mjs"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^22.7.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "concurrently": "^9.0.0",
+    "cross-env": "^7.0.3",
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.0",
+    "jsdom": "^30.1.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^5.6.0",
+    "vite": "^5.4.0",
+    "wait-on": "^8.0.0"
+  },
+  "build": {
+    "appId": "ai.jarvis.desktop",
+    "productName": "JARVIS AI",
+    "copyright": "JARVIS AI",
+    "directories": {
+      "output": "release",
+      "buildResources": "resources"
+    },
+    "files": [
+      "dist-electron/**/*",
+      "dist/renderer/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/icon.png",
+        "to": "icon.png"
+      },
+      {
+        "from": "resources/tray.png",
+        "to": "tray.png"
+      },
+      {
+        "from": "../../services/agent-runtime/dist/jarvis-agent-runtime",
+        "to": "backend",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "resources/icon.ico",
+      "artifactName": "JARVIS-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "JARVIS AI",
+      "uninstallDisplayName": "JARVIS AI",
+      "deleteAppDataOnUninstall": false
+    },
+    "portable": {
+      "artifactName": "JARVIS-Portable.${ext}"
+    },
+    "publish": null
+  }
+}

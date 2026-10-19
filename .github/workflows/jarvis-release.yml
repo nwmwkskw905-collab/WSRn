@@ -1,0 +1,229 @@
+name: JARVIS Windows Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Versao a empacotar (ex.: 0.9.0). Vazio usa a versao do package.json."
+        required: false
+        default: ""
+  push:
+    tags:
+      - "v*"
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: jarvis-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+  NODE_VERSION: "20"
+
+jobs:
+  backend-tests:
+    name: Testes e contratos (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Instalar dependencias do runtime
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r services/agent-runtime/requirements-dev.txt
+          python -m pip install -r services/webhook-relay/requirements.txt
+      - name: Executar suite obrigatoria
+        env:
+          JARVIS_TEST_DATA: /tmp/jarvis-tests
+        run: python -m pytest tests -q --maxfail=1
+      - name: Smoke do aplicativo FastAPI
+        env:
+          JARVIS_DATA_DIR: /tmp/jarvis-ci
+          JARVIS_REQUIRE_AUTH: "0"
+          JARVIS_AUTO_WORKER: "0"
+        run: |
+          python - <<'PY'
+          import sys
+          sys.path.insert(0, "services/agent-runtime")
+          from fastapi.testclient import TestClient
+          from jarvis.main import app
+          with TestClient(app) as client:
+              assert client.get("/health").json()["status"] == "ok"
+              paths = app.openapi()["paths"]
+              assert len(paths) >= 60, len(paths)
+              print(f"rotas verificadas: {len(paths)}")
+          PY
+
+  renderer:
+    name: Typecheck e build do renderer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - name: Instalar dependencias (sem binario Electron)
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+        run: npm ci --no-audit --no-fund
+      - name: Typecheck main + preload + renderer
+        run: npm run typecheck
+      - name: Build do renderer
+        run: npm run build
+      - name: Smoke de renderizacao das 20 secoes (jsdom)
+        run: node scripts/render-smoke.mjs
+
+  windows-build:
+    name: Empacotar Windows x64
+    needs: [backend-tests, renderer]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Definir versao
+        id: version
+        shell: pwsh
+        run: |
+          $version = "${{ github.event.inputs.version }}"
+          if (-not $version) {
+            $version = (Get-Content apps/desktop/package.json -Raw | ConvertFrom-Json).version
+          }
+          if ("${{ github.ref_type }}" -eq "tag") { $tag = "${{ github.ref_name }}".TrimStart("v"); $version = $tag }
+          "value=$version" >> $env:GITHUB_OUTPUT
+          Write-Host "Versao: $version"
+
+      - name: Instalar dependencias Node
+        run: npm ci --no-audit --no-fund
+
+      - name: Typecheck e build
+        run: |
+          npm run typecheck
+          npm run build
+
+      - name: Instalar runtime e PyInstaller
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r services/agent-runtime/requirements.txt "pyinstaller==6.11.1"
+
+      - name: Gerar executavel do runtime (PyInstaller)
+        working-directory: services/agent-runtime
+        run: python -m PyInstaller --noconfirm --clean JARVIS-Agent-Runtime.spec
+
+      - name: Verificar executavel do runtime
+        shell: pwsh
+        run: |
+          $exe = "services/agent-runtime/dist/jarvis-agent-runtime/jarvis-agent-runtime.exe"
+          if (-not (Test-Path $exe)) { throw "Runtime nao empacotado" }
+          $proc = Start-Process -FilePath $exe -PassThru -WindowStyle Hidden -Environment @{
+            JARVIS_DATA_DIR = "${{ github.workspace }}\.ci-data"
+            JARVIS_PORT = "8799"
+            JARVIS_REQUIRE_AUTH = "0"
+            JARVIS_AUTO_WORKER = "0"
+          }
+          try {
+            $ok = $false
+            for ($i = 0; $i -lt 40; $i++) {
+              Start-Sleep -Seconds 1
+              try {
+                $health = Invoke-RestMethod -Uri "http://127.0.0.1:8799/health" -TimeoutSec 2
+                if ($health.status -eq "ok") { $ok = $true; break }
+              } catch { }
+            }
+            if (-not $ok) { throw "Runtime congelado nao respondeu em 40s" }
+            Write-Host "Runtime respondeu: $($health.version)"
+          }
+          finally {
+            Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+          }
+
+      - name: Preparar assinatura de codigo (se configurada)
+        shell: pwsh
+        env:
+          PFX_BASE64: ${{ secrets.WINDOWS_CERT_PFX_BASE64 }}
+          PFX_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+        run: |
+          if (-not $PFX_BASE64) {
+            Write-Host "Nenhum certificado configurado; o build sera NAO assinado."
+            "SIGNED_BUILD=false" >> $env:GITHUB_ENV
+            exit 0
+          }
+          $pfx = Join-Path $env:RUNNER_TEMP "cert.pfx"
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($PFX_BASE64))
+          "CSC_LINK=$pfx" >> $env:GITHUB_ENV
+          "CSC_KEY_PASSWORD=$PFX_PASSWORD" >> $env:GITHUB_ENV
+          "SIGNED_BUILD=true" >> $env:GITHUB_ENV
+
+      - name: Empacotar instalador e portatil
+        env:
+          JARVIS_ARTIFACT_VERSION: ${{ steps.version.outputs.value }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --win nsis portable --x64 --publish never -c.extraMetadata.version=${{ steps.version.outputs.value }}
+
+      - name: Checksums e manifesto
+        shell: pwsh
+        run: |
+          $release = "apps/desktop/release"
+          $files = Get-ChildItem $release -Filter *.exe
+          if (-not $files) { throw "Nenhum executavel gerado" }
+          $lines = foreach ($file in $files) {
+            $hash = (Get-FileHash $file.FullName -Algorithm SHA256).Hash.ToLower()
+            "$hash  $($file.Name)"
+          }
+          $lines | Out-File -Encoding ascii "$release/SHA256SUMS.txt"
+          $lines | Write-Host
+          @{
+            version = "${{ steps.version.outputs.value }}"
+            built_at = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+            commit = "${{ github.sha }}"
+            runner = "${{ runner.os }}-${{ runner.arch }}"
+            signed = ("$env:SIGNED_BUILD" -eq "true")
+            artifacts = @($files | ForEach-Object { $_.Name })
+          } | ConvertTo-Json | Out-File -Encoding utf8 "$release/build-info.json"
+          Get-Content "$release/build-info.json"
+
+      - name: Upload artefato JARVIS-Windows-Release
+        uses: actions/upload-artifact@v4
+        with:
+          name: JARVIS-Windows-Release
+          path: |
+            apps/desktop/release/*.exe
+            apps/desktop/release/SHA256SUMS.txt
+            apps/desktop/release/build-info.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Anexar a release (tags)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            apps/desktop/release/*.exe
+            apps/desktop/release/SHA256SUMS.txt
+            apps/desktop/release/build-info.json
+          draft: true
+          generate_release_notes: true
+          body: |
+            Binarios Windows x64 gerados pelo GitHub Actions.
+
+            - Instalador por usuario: `JARVIS-Setup-${{ steps.version.outputs.value }}.exe`
+            - Portatil: `JARVIS-Portable.exe`
+            - Checksums: `SHA256SUMS.txt`
+
+            Enquanto nao houver certificado de assinatura configurado, o Windows
+            SmartScreen pode exibir um aviso. Verifique os checksums antes de executar.

@@ -1,0 +1,14 @@
+{
+  "name": "JARVIS Companion",
+  "short_name": "JARVIS",
+  "description": "Companheiro movel do JARVIS AI: comandos, tarefas, vendas e aprovacoes.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#05070a",
+  "theme_color": "#05070a",
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

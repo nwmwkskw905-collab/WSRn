@@ -1,0 +1,19 @@
+{
+  "id": "voice",
+  "name": "Voz pt-BR",
+  "objective": "Escutar comandos com indicador visivel, wake word opcional e TTS local do navegador ou provedor.",
+  "implementation": "apps/desktop/src/renderer/lib/voice.ts",
+  "skills": [],
+  "tools": [],
+  "permissions": [
+    "microphone"
+  ],
+  "routes": [
+    "/api/settings/{key}"
+  ],
+  "status": "implemented",
+  "limitations": [
+    "STT padrao usa Web Speech API do Chromium/Edge; faster-whisper local exige instalacao opcional.",
+    "Gravacao nunca ocorre sem indicador visivel e botao de parada."
+  ]
+}

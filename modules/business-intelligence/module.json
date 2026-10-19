@@ -1,0 +1,21 @@
+{
+  "id": "business-intelligence",
+  "name": "JARVIS BUSINESS INTELLIGENCE",
+  "objective": "Planejar metas de receita com premissas explicitas e economia unitaria auditavel.",
+  "implementation": "services/agent-runtime/jarvis/modules/business.py",
+  "skills": [
+    "business.plan",
+    "marketing.content"
+  ],
+  "tools": [],
+  "permissions": [],
+  "routes": [
+    "/api/businesses",
+    "/api/businesses/plan"
+  ],
+  "status": "implemented",
+  "limitations": [
+    "Nao consulta bases de mercado pagas; todas as premissas vem do usuario.",
+    "Nao garante receita: os cenarios sao calculos aritmeticos, nao previsoes."
+  ]
+}

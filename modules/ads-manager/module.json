@@ -1,0 +1,28 @@
+{
+  "id": "ads-manager",
+  "name": "JARVIS ADS MANAGER",
+  "objective": "Preparar campanhas Meta/Google/TikTok, analisar metricas exportadas e manter gasto em R$ 0,00 ate autorizacao.",
+  "implementation": "services/agent-runtime/jarvis/modules/ads.py",
+  "skills": [
+    "ads.prepare"
+  ],
+  "tools": [],
+  "permissions": [
+    "ads.read",
+    "ads.write",
+    "ads.budget"
+  ],
+  "routes": [
+    "/api/ads/prepare",
+    "/api/ads/analyze",
+    "/api/ads/budget",
+    "/api/ads/campaigns",
+    "/api/ads/config",
+    "/api/ads/publish/{campaign_id}"
+  ],
+  "status": "validation_pending",
+  "limitations": [
+    "Criacao real de campanha na Meta exige app aprovado, conta de anuncios e token com permissao de escrita.",
+    "Google Ads e TikTok Ads dependem de OAuth proprio e ainda nao foram exercitados contra a API real."
+  ]
+}

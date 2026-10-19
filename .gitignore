@@ -1,0 +1,40 @@
+# Node
+node_modules/
+dist/
+out/
+release/
+apps/desktop/dist/
+apps/desktop/dist-electron/
+apps/desktop/release/
+*.tsbuildinfo
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+services/agent-runtime/.runtime/
+services/webhook-relay/.runtime/
+
+# Local state / credentials (never commit)
+*.sqlite
+*.sqlite3
+*.db
+data/
+runtime/
+logs/
+.env
+.env.*
+!.env.example
+credentials.json
+service-account.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

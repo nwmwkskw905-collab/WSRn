@@ -1,0 +1,25 @@
+{
+  "id": "sales-engine",
+  "name": "JARVIS SALES ENGINE",
+  "objective": "Consolidar pedidos pagos, funil de CRM e elegibilidade de contato sem inflar receita.",
+  "implementation": "services/agent-runtime/jarvis/modules/sales.py",
+  "skills": [
+    "sales.report"
+  ],
+  "tools": [],
+  "permissions": [
+    "cakto.read"
+  ],
+  "routes": [
+    "/api/sales/report",
+    "/api/sales/dashboard",
+    "/api/sales/funnel",
+    "/api/leads",
+    "/api/leads/{lead_id}"
+  ],
+  "status": "implemented",
+  "limitations": [
+    "Mostra 'sem dado' quando nao ha pedidos sincronizados; nunca estima faturamento.",
+    "Envio automatico de mensagens nao existe: disparo em massa e bloqueado por politica."
+  ]
+}

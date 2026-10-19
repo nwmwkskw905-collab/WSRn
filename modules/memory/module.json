@@ -1,0 +1,20 @@
+{
+  "id": "memory",
+  "name": "Memoria operacional",
+  "objective": "Guardar preferencias, contexto de projeto e fatos comerciais com busca FTS5, edicao e remocao.",
+  "implementation": "services/agent-runtime/jarvis/modules/memory.py",
+  "skills": [
+    "memory.save"
+  ],
+  "tools": [],
+  "permissions": [],
+  "routes": [
+    "/api/memories",
+    "/api/memories/search",
+    "/api/memories/{memory_id}"
+  ],
+  "status": "implemented",
+  "limitations": [
+    "Nao treina modelos; a memoria e apenas contexto recuperado localmente."
+  ]
+}

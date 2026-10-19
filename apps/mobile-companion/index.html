@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="JARVIS" />
+    <meta name="theme-color" content="#05070a" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="icons/icon.svg" />
+    <link rel="stylesheet" href="styles.css" />
+    <title>JARVIS Companion</title>
+  </head>
+  <body>
+    <header class="top">
+      <div class="brand">
+        <svg viewBox="0 0 64 64" width="28" height="28" aria-hidden="true">
+          <circle cx="32" cy="32" r="29" fill="#070b12" stroke="#37e6ff" stroke-width="1.4" />
+          <circle cx="32" cy="32" r="20" fill="none" stroke="#37e6ff" stroke-opacity="0.5" stroke-width="1" stroke-dasharray="4 6" />
+          <circle cx="32" cy="32" r="9" fill="none" stroke="#37e6ff" stroke-width="2.2" />
+          <circle cx="32" cy="32" r="3.2" fill="#9ff6ff" />
+        </svg>
+        <strong>JARVIS</strong>
+        <span id="conn" class="pill">offline</span>
+      </div>
+      <button id="settingsBtn" class="ghost" aria-label="Configuracoes">⚙︎</button>
+    </header>
+
+    <main>
+      <section id="setup" class="panel">
+        <h1>Parear com o PC</h1>
+        <p class="muted">O PC precisa estar ligado, com o JARVIS aberto e uma URL HTTPS publica (Tailscale Funnel ou Cloudflare Tunnel) apontando para o runtime.</p>
+        <label class="field"><span>URL do runtime</span><input id="url" type="url" placeholder="https://jarvis.exemplo.ts.net" autocomplete="url" /></label>
+        <label class="field"><span>Codigo de pareamento</span><input id="code" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="000000" /></label>
+        <label class="field"><span>Nome do dispositivo</span><input id="device" placeholder="iPhone" maxlength="48" /></label>
+        <button id="pairBtn" class="primary">Parear</button>
+        <p id="setupMsg" class="msg" role="status"></p>
+        <p class="muted tiny">O token e guardado apenas neste navegador (localStorage) e pode ser revogado no PC em Dispositivos. Nunca digitamos senhas da Apple.</p>
+      </section>
+
+      <section id="app" class="hidden">
+        <nav class="tabs" role="tablist">
+          <button data-tab="chat" class="active">Chat</button>
+          <button data-tab="tasks">Tarefas</button>
+          <button data-tab="sales">Vendas</button>
+          <button data-tab="approvals">Aprovacoes</button>
+        </nav>
+
+        <div id="tab-chat" class="tab-panel">
+          <div id="log" class="log" aria-live="polite"></div>
+          <form id="chatForm" class="composer">
+            <input id="message" placeholder="Comande o JARVIS" autocomplete="off" />
+            <button class="primary" type="submit">Enviar</button>
+          </form>
+        </div>
+
+        <div id="tab-tasks" class="tab-panel hidden">
+          <button id="refreshTasks" class="ghost wide">Atualizar</button>
+          <div id="tasks"></div>
+        </div>
+
+        <div id="tab-sales" class="tab-panel hidden">
+          <div id="sales" class="metrics"></div>
+          <p class="muted tiny">Somente dados reais da Cakto. Sem conexao, nada e exibido.</p>
+        </div>
+
+        <div id="tab-approvals" class="tab-panel hidden">
+          <div id="approvals"></div>
+        </div>
+      </section>
+    </main>
+
+    <div id="toast" class="toast hidden" role="status"></div>
+    <script src="app.js" type="module"></script>
+  </body>
+</html>
