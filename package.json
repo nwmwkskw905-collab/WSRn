@@ -16,6 +16,6 @@
     "smoke:render": "npm --workspace apps/desktop run build && node scripts/render-smoke.mjs"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22.22"
   }
 }

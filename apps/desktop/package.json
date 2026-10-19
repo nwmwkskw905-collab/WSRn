@@ -94,5 +94,8 @@
       "artifactName": "JARVIS-Portable.${ext}"
     },
     "publish": null
+  },
+  "engines": {
+    "node": ">=22.22"
   }
 }
