@@ -178,10 +178,24 @@ jobs:
           "SIGNED_BUILD=true" >> $env:GITHUB_ENV
 
       - name: Empacotar instalador e portatil
+        shell: pwsh
         env:
           JARVIS_ARTIFACT_VERSION: ${{ steps.version.outputs.value }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx electron-builder --win nsis portable --x64 --publish never -c.extraMetadata.version=${{ steps.version.outputs.value }}
+        run: |
+          $version = "${{ steps.version.outputs.value }}"
+          $output = npx electron-builder --win nsis portable --x64 --publish never "-c.extraMetadata.version=$version" 2>&1
+          $code = $LASTEXITCODE
+          $output | ForEach-Object { Write-Host $_ }
+          $output | Out-File -Encoding utf8 "apps/desktop/release-builder.log"
+          if ($code -ne 0) {
+            # The job log endpoint is not always reachable from the agent; surface the
+            # tail as an annotation so failures stay diagnosable.
+            $tail = ($output | Select-Object -Last 6) -join " | "
+            if ($tail.Length -gt 900) { $tail = $tail.Substring($tail.Length - 900) }
+            Write-Host "::error title=electron-builder($code)::$tail"
+            exit $code
+          }
 
       - name: Checksums e manifesto
         shell: pwsh
@@ -213,6 +227,7 @@ jobs:
             apps/desktop/release/*.exe
             apps/desktop/release/SHA256SUMS.txt
             apps/desktop/release/build-info.json
+            apps/desktop/release-builder.log
           if-no-files-found: error
           retention-days: 30
 
