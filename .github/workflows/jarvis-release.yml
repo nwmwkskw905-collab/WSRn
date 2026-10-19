@@ -191,7 +191,9 @@ jobs:
           if ($code -ne 0) {
             # The job log endpoint is not always reachable from the agent; surface the
             # tail as an annotation so failures stay diagnosable.
-            $tail = ($output | Select-Object -Last 6) -join " | "
+            $relevant = $output | Where-Object { $_ -match "⨯|error|Error|failed|cannot|Cannot|ENOENT|EPERM|EACCES" } | Select-Object -First 12
+            if (-not $relevant) { $relevant = $output | Select-Object -Last 12 }
+            $tail = $relevant -join " | "
             if ($tail.Length -gt 900) { $tail = $tail.Substring($tail.Length - 900) }
             Write-Host "::error title=electron-builder($code)::$tail"
             exit $code
