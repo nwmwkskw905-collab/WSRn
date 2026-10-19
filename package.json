@@ -1,0 +1,21 @@
+{
+  "name": "jarvis-ai-workspace",
+  "private": true,
+  "version": "0.9.0",
+  "description": "JARVIS AI - assistente autonomo para Windows",
+  "workspaces": [
+    "apps/desktop",
+    "apps/mobile-companion"
+  ],
+  "scripts": {
+    "dev": "npm --workspace apps/desktop run dev",
+    "build": "npm --workspace apps/desktop run build",
+    "dist": "npm --workspace apps/desktop run dist",
+    "typecheck": "npm --workspace apps/desktop run typecheck",
+    "backend": "python3 -m uvicorn jarvis.main:app --app-dir services/agent-runtime --host 127.0.0.1 --port 8765",
+    "smoke:render": "npm --workspace apps/desktop run build && node scripts/render-smoke.mjs"
+  },
+  "engines": {
+    "node": ">=22.22"
+  }
+}

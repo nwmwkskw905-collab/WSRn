@@ -1,0 +1,34 @@
+{
+  "id": "computer-control",
+  "name": "Controle do computador",
+  "objective": "Abrir apps, digitar, capturar tela e organizar arquivos com verificacao de resultado.",
+  "implementation": "services/agent-runtime/jarvis/tools/builtin.py",
+  "skills": [
+    "files.organize",
+    "windows.notepad"
+  ],
+  "tools": [
+    "fs.list",
+    "fs.move",
+    "windows.open_app",
+    "windows.type_text",
+    "windows.capture",
+    "shell.run"
+  ],
+  "permissions": [
+    "automation.input",
+    "screen.capture",
+    "shell.execute",
+    "fs.read",
+    "fs.write"
+  ],
+  "routes": [
+    "/api/tools",
+    "/api/permissions"
+  ],
+  "status": "requires_external_configuration",
+  "limitations": [
+    "Automacao de janelas exige Windows 10/11 com pywinauto/UIA; em outros sistemas retorna plataforma nao suportada.",
+    "Nunca contorna UAC, login, captcha ou protecoes de jogos."
+  ]
+}

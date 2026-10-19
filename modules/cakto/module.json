@@ -1,0 +1,31 @@
+{
+  "id": "cakto",
+  "name": "Integracao Cakto",
+  "objective": "Autenticar por client credentials, listar/criar produtos, sincronizar pedidos e receber webhooks idempotentes.",
+  "implementation": "services/agent-runtime/jarvis/modules/cakto.py",
+  "skills": [
+    "cakto.list_products",
+    "cakto.create_product",
+    "cakto.sync_orders"
+  ],
+  "tools": [],
+  "permissions": [
+    "cakto.read",
+    "cakto.write"
+  ],
+  "routes": [
+    "/api/integrations/cakto/status",
+    "/api/integrations/cakto/connect",
+    "/api/integrations/cakto/sync",
+    "/api/integrations/cakto",
+    "/api/cakto/products",
+    "/api/cakto/webhook-events",
+    "/api/webhooks/cakto"
+  ],
+  "status": "requires_external_configuration",
+  "limitations": [
+    "Sem client_id/client_secret reais, a listagem retorna itens marcados (_demo) e um aviso explicito.",
+    "Criar produto exige aprovacao com PIN e consome a aprovacao antes da chamada.",
+    "Webhooks so chegam com o PC ligado, a menos que o relay HTTPS esteja publicado."
+  ]
+}

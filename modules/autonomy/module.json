@@ -1,0 +1,27 @@
+{
+  "id": "autonomy",
+  "name": "Motor de tarefas autonomo",
+  "objective": "Planejar, executar, verificar, pausar, retomar e cancelar tarefas com checkpoints e kill switch.",
+  "implementation": "services/agent-runtime/jarvis/engine/tasks.py",
+  "skills": [
+    "general.answer",
+    "noop"
+  ],
+  "tools": [],
+  "permissions": [],
+  "routes": [
+    "/api/tasks",
+    "/api/tasks/{task_id}",
+    "/api/tasks/{task_id}/pause",
+    "/api/tasks/{task_id}/resume",
+    "/api/tasks/{task_id}/cancel",
+    "/api/tasks/{task_id}/events",
+    "/api/security/stop",
+    "/api/security/release"
+  ],
+  "status": "implemented",
+  "limitations": [
+    "Execucao para quando o app fecha; nao ha agendamento em nuvem.",
+    "Efeitos externos ja concluidos nao sao revertidos pelo cancelamento."
+  ]
+}

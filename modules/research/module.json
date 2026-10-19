@@ -1,0 +1,24 @@
+{
+  "id": "research",
+  "name": "Pesquisa na internet",
+  "objective": "Coletar fontes, classificar credibilidade e isolar conteudo externo como dado, nao instrucao.",
+  "implementation": "services/agent-runtime/jarvis/tools/builtin.py",
+  "skills": [
+    "research.report"
+  ],
+  "tools": [
+    "research.search",
+    "research.fetch_url"
+  ],
+  "permissions": [
+    "internet"
+  ],
+  "routes": [
+    "/api/research/config"
+  ],
+  "status": "requires_external_configuration",
+  "limitations": [
+    "Sem provedor de busca configurado (SearXNG/Brave/Serper), a pesquisa declara indisponibilidade.",
+    "Nao acessa conteudo pago nem ignora robots/termos de uso."
+  ]
+}

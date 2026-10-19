@@ -1,0 +1,26 @@
+{
+  "id": "game-studio",
+  "name": "JARVIS GAME STUDIO",
+  "objective": "Produzir projeto Godot 4 valido (projeto, cena, script, GDD) e validar com o motor quando instalado.",
+  "implementation": "services/agent-runtime/jarvis/modules/gamestudio.py",
+  "skills": [
+    "gamestudio.build"
+  ],
+  "tools": [
+    "fs.mkdir",
+    "fs.write_text",
+    "fs.hash"
+  ],
+  "permissions": [
+    "fs.write"
+  ],
+  "routes": [
+    "/api/gamestudio/build",
+    "/api/projects"
+  ],
+  "status": "validation_pending",
+  "limitations": [
+    "Sem Godot no PATH, o status fica 'validation_pending' e nenhum executavel e gerado.",
+    "Automacao de jogos de terceiros nao contorna anticheat e nao foi implementada."
+  ]
+}

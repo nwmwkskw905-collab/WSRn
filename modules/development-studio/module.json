@@ -1,0 +1,30 @@
+{
+  "id": "development-studio",
+  "name": "JARVIS DEVELOPMENT STUDIO",
+  "objective": "Gerar projetos reais no workspace, executar testes e registrar artefatos com hash.",
+  "implementation": "services/agent-runtime/jarvis/modules/development.py",
+  "skills": [
+    "development.build"
+  ],
+  "tools": [
+    "fs.mkdir",
+    "fs.write_text",
+    "fs.read_text",
+    "fs.hash",
+    "code.run_tests"
+  ],
+  "permissions": [
+    "fs.read",
+    "fs.write",
+    "shell.execute"
+  ],
+  "routes": [
+    "/api/development/build",
+    "/api/projects"
+  ],
+  "status": "implemented",
+  "limitations": [
+    "Gera codigo-fonte e testa o nucleo; nao produz instalador do software gerado.",
+    "Nao publica em repositorios nem executa deploy."
+  ]
+}
